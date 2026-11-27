@@ -149,11 +149,19 @@ public enum ProjectInstaller {
 
     // MARK: - Build settings
 
+    private static let sandboxing = "ENABLE_USER_SCRIPT_SANDBOXING"
+    private static let sandboxingBefore = "TESTID_INJECT_SANDBOXING_BEFORE"
+    private static let unsetMarker = "unset"
+
     private static func applyInstall(to config: XCBuildConfiguration) -> Bool {
         let before = config.buildSettings
         var settings = before
         settings["TESTID_INJECT"] = .string("YES")
-        settings["ENABLE_USER_SCRIPT_SANDBOXING"] = .string("NO")
+        if settings[sandboxing] != .string("NO") {
+            // Remember the old value so `remove` can put it back.
+            settings[sandboxingBefore] = settings[sandboxing] ?? .string(unsetMarker)
+            settings[sandboxing] = .string("NO")
+        }
         settings["OTHER_SWIFT_FLAGS"] = addingOverlayFlag(to: settings["OTHER_SWIFT_FLAGS"])
         config.buildSettings = settings
         return settings != before
@@ -166,7 +174,11 @@ public enum ProjectInstaller {
         }
         var settings = before
         settings["TESTID_INJECT"] = nil
-        // ENABLE_USER_SCRIPT_SANDBOXING is left as is: its value before install is unknown.
+        // Installs made before the saved value existed leave sandboxing as is.
+        if let saved = settings[sandboxingBefore] {
+            settings[sandboxing] = saved == .string(unsetMarker) ? nil : saved
+            settings[sandboxingBefore] = nil
+        }
         settings["OTHER_SWIFT_FLAGS"] = removingOverlayFlag(from: settings["OTHER_SWIFT_FLAGS"])
         config.buildSettings = settings
         return settings != before

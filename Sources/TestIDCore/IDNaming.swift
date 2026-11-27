@@ -21,7 +21,11 @@ public enum IDNaming {
 
     public static var controls: Set<String> { Set(typeMap.keys) }
 
-    static let screenSuffixes = ["ViewController", "Controller", "Screen", "Page", "View"]
+    /// Screen suffixes, then component suffixes: `SearchField.swift` names the `search` component.
+    static let screenSuffixes = [
+        "ViewController", "Controller", "Screen", "Page", "View",
+        "Button", "Field", "Toggle", "Link", "Menu", "Picker",
+    ]
 
     /// `LoginView.swift` -> `login`, `CheckoutScreen.swift` -> `checkout`.
     public static func screen(fromFileName fileName: String) -> String {
@@ -47,7 +51,16 @@ public enum IDNaming {
         let symbol = signals.symbol.map(slugify) ?? ""
         let name = [asciiLabel, handler, unicodeLabel, symbol, slugify(control)]
             .first { !$0.isEmpty } ?? ""
-        return [screen, name, type(for: control)].filter { !$0.isEmpty }.joined(separator: "-")
+        return joinWithoutRepeat(screen, [name, type(for: control)].filter { !$0.isEmpty }.joined(separator: "-"))
+    }
+
+    /// `navigation-bar-close` + `close-button` -> `navigation-bar-close-button`:
+    /// words that end the screen and start the rest appear once.
+    static func joinWithoutRepeat(_ screen: String, _ rest: String) -> String {
+        let head = screen.split(separator: "-")
+        let tail = rest.split(separator: "-")
+        let overlap = (0...min(head.count, tail.count)).last { head.suffix($0).elementsEqual(tail.prefix($0)) } ?? 0
+        return (head.dropLast(overlap) + tail).joined(separator: "-")
     }
 
     /// Lowercase, dash-separated, ASCII only. camelCase boundaries become dashes.

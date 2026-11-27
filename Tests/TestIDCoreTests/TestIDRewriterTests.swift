@@ -58,7 +58,7 @@ final class TestIDRewriterTests: XCTestCase {
 
     func testNonASCIILabel() {
         XCTAssertEqual(ids(#"Button("登入") { }"#), ["login-登入-button"])
-        XCTAssertEqual(ids(#"Button("登入", action: handleLogin)"#), ["login-login-button"])
+        XCTAssertEqual(ids(#"Button("登入", action: handleLogin)"#), ["login-button"])
     }
 
     func testContentClosuresAreNotLabels() {
@@ -122,7 +122,18 @@ final class TestIDRewriterTests: XCTestCase {
         XCTAssertTrue(output.contains(#"Button("Go") { }.accessibilityIdentifier("login-go-button")"#))
         XCTAssertEqual(output.components(separatedBy: "\n").count, source.components(separatedBy: "\n").count)
     }
+    func testComponentFileNameIsNotRepeated() {
+        XCTAssertEqual(TestIDTransform.rewrite(
+            source: "struct NavigationBarCloseButton: View { var body: some View { Button(role: .close, action: a) { } } }",
+            fileName: "NavigationBarCloseButton.swift")?.ids, ["navigation-bar-close-button"])
+        XCTAssertEqual(TestIDTransform.rewrite(
+            source: #"struct SearchField: View { var body: some View { TextField("Search", text: $q) } }"#,
+            fileName: "SearchField.swift")?.ids, ["search-input"])
+        XCTAssertEqual(ids(#"Button("Login") { }"#), ["login-button"])
+        XCTAssertEqual(ids(#"Button("Log out") { }"#), ["login-log-out-button"])
+    }
 }
+
 
 final class IDNamingTests: XCTestCase {
     func testScreenFromFileName() {

@@ -105,6 +105,32 @@ final class ProjectInstallerTests: XCTestCase {
         XCTAssertEqual(try ProjectInstaller.uninstall(projectAt: projectPath), [])
     }
 
+    func testRemoveRestoresSandboxingWhenItWasUnset() throws {
+        XCTAssertNil(try settings("Debug")["ENABLE_USER_SCRIPT_SANDBOXING"])
+        let before = try settings("Debug")
+
+        try ProjectInstaller.install(projectAt: projectPath)
+        try ProjectInstaller.uninstall(projectAt: projectPath)
+
+        XCTAssertEqual(try settings("Debug"), before)
+    }
+
+    func testRemoveRestoresSandboxingWhenItWasYes() throws {
+        let project = try XcodeProj(path: Path(projectPath))
+        let target = try XCTUnwrap(project.pbxproj.nativeTargets.first { $0.name == "Demo" })
+        let debug = try XCTUnwrap(target.buildConfigurationList?.buildConfigurations.first { $0.name == "Debug" })
+        debug.buildSettings["ENABLE_USER_SCRIPT_SANDBOXING"] = .string("YES")
+        try project.pbxproj.write(path: XcodeProj.pbxprojPath(Path(projectPath)), override: true)
+        let before = try settings("Debug")
+
+        try ProjectInstaller.install(projectAt: projectPath)
+        XCTAssertEqual(try settings("Debug")["ENABLE_USER_SCRIPT_SANDBOXING"], .string("NO"))
+        try ProjectInstaller.install(projectAt: projectPath)
+        try ProjectInstaller.uninstall(projectAt: projectPath)
+
+        XCTAssertEqual(try settings("Debug"), before)
+    }
+
     func testUnknownTargetLists() {
         XCTAssertThrowsError(try ProjectInstaller.install(projectAt: projectPath, targets: ["Nope"])) { error in
             XCTAssertEqual(error as? SetupError, .unknownTargets(["Nope"], available: ["Demo", "DemoUITests"]))
