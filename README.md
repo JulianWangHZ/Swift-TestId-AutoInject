@@ -10,7 +10,7 @@ Install the CLI with one of:
 ```bash
 brew install JulianWangHZ/tap/testid-inject
 # or with Mint
-mint install JulianWangHZ/Swift-TestId-AutoInject@v0.1.0
+mint install JulianWangHZ/Swift-TestId-AutoInject@v0.1.1
 # or from a clone
 git clone https://github.com/JulianWangHZ/Swift-TestId-AutoInject.git
 cd Swift-TestId-AutoInject && make install   # PREFIX=~/.local to skip sudo
