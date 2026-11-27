@@ -92,7 +92,7 @@ struct Rewrite: ParsableCommand {
 
     func run() throws {
         let source = try String(contentsOfFile: file, encoding: .utf8)
-        print(TestIDTransform.rewrite(source: source)?.output ?? source, terminator: "")
+        print(TestIDTransform.rewrite(source: source, fileName: file)?.output ?? source, terminator: "")
     }
 }
 

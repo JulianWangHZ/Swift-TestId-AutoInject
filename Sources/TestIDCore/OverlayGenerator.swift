@@ -10,8 +10,9 @@ public struct InjectedFile: Equatable, Sendable {
 
 public enum TestIDTransform {
     /// Returns the rewritten source and the injected IDs, or nil when nothing changed.
-    public static func rewrite(source: String) -> (output: String, ids: [String])? {
-        let rewriter = TestIDRewriter()
+    /// `fileName` gives the screen segment: `LoginView.swift` -> `login`.
+    public static func rewrite(source: String, fileName: String) -> (output: String, ids: [String])? {
+        let rewriter = TestIDRewriter(screen: IDNaming.screen(fromFileName: fileName))
         let output = rewriter.rewrite(Parser.parse(source: source)).description
         return rewriter.injected.isEmpty ? nil : (output, rewriter.injected)
     }
@@ -41,7 +42,7 @@ public struct OverlayGenerator {
     private func inject(_ path: String) throws -> InjectedFile? {
         let absolute = URL(fileURLWithPath: path).standardizedFileURL.path
         let source = try String(contentsOfFile: absolute, encoding: .utf8)
-        guard let result = TestIDTransform.rewrite(source: source) else { return nil }
+        guard let result = TestIDTransform.rewrite(source: source, fileName: absolute) else { return nil }
 
         let copy = outDir.appendingPathComponent(absolute)
         try FileManager.default.createDirectory(
@@ -52,7 +53,10 @@ public struct OverlayGenerator {
 
     private static func writeOverlay(_ files: [InjectedFile], to url: URL) throws {
         let roots = files.map { ["type": "file", "name": $0.source, "external-contents": $0.copy] }
-        let json: [String: Any] = ["version": 0, "case-sensitive": "false", "roots": roots]
+        // use-external-names=false keeps the original path in #filePath, diagnostics and debug info.
+        let json: [String: Any] = [
+            "version": 0, "case-sensitive": "false", "use-external-names": false, "roots": roots,
+        ]
         let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(), withIntermediateDirectories: true)

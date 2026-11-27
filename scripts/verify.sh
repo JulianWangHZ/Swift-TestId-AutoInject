@@ -24,13 +24,13 @@ cp $F $SP/LoginView.bak; trap 'cp $SP/LoginView.bak $F' EXIT
 sed -i '' 's/Button("Sign In")/Button("Log In")/' $F
 $X -destination "$DEST" build > "$SP/v3.log" 2>&1; echo "exit=$?"
 echo "SwiftCompile tasks: $(grep -cE '^SwiftCompile normal arm64 /' "$SP/v3.log")"
-strings $BIN | grep -E "LoginView\.button\.(sign-in|log-in)"
+strings $BIN | grep -E "login-(sign-in|log-in)-button"
 cp $SP/LoginView.bak $F
 echo "source restored: $(grep -c 'Sign In' $F)"
 
 echo "== 4. Release (no injection)"
 xcodebuild -project Demo/Demo.xcodeproj -scheme Demo -configuration Release -destination "$DEST" -derivedDataPath $DD build > "$SP/v4.log" 2>&1; echo "exit=$?"
-echo "IDs in Release binary: $(strings $DD/Build/Products/Release-iphonesimulator/Demo.app/Demo | grep -c 'LoginView\.button')"
+echo "IDs in Release binary: $(strings $DD/Build/Products/Release-iphonesimulator/Demo.app/Demo | grep -c 'login-sign-in-button')"
 
 echo "== 5. tool missing -> warning, build still passes"
 DD2=$SP/DD-missing; rm -rf $DD2
