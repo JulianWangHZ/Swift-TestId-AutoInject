@@ -5,8 +5,18 @@ Your source files do not change.
 
 ## Quick start
 
+Install the CLI with one of:
+
 ```bash
-make install                 # builds and copies testid-inject to /usr/local/bin
+mint install JulianWangHZ/Swift-TestId-AutoInject@v0.1.0
+# or from a clone
+git clone https://github.com/JulianWangHZ/Swift-TestId-AutoInject.git
+cd Swift-TestId-AutoInject && make install   # PREFIX=~/.local to skip sudo
+```
+
+Then set up your app:
+
+```bash
 cd path/to/YourApp
 testid-inject setup          # edits YourApp.xcodeproj
 ```
