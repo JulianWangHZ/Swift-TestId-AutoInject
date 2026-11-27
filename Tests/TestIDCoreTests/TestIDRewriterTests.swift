@@ -45,6 +45,13 @@ final class TestIDRewriterTests: XCTestCase {
                        ["login-settings-link"])
     }
 
+    func testNavigationValue() {
+        XCTAssertEqual(ids("NavigationLink(value: donut.id) { DonutView(donut: donut) }"), ["login-donut-link"])
+        XCTAssertEqual(ids("NavigationLink(value: Panel.city(city.id)) { Label(city.name, systemImage: \"building\") }"),
+                       ["login-city-link"])
+        XCTAssertEqual(ids("NavigationLink(value: Panel.truck) { Image(systemName: \"box\") }"), ["login-truck-link"])
+    }
+
     func testSymbolFallback() {
         XCTAssertEqual(ids(#"Button { } label: { Image(systemName: "trash") }"#), ["login-trash-button"])
     }
@@ -58,6 +65,30 @@ final class TestIDRewriterTests: XCTestCase {
         XCTAssertEqual(ids(#"Picker("Size", selection: $size) { Text("S") }"#), ["login-size-select"])
         XCTAssertEqual(ids(#"Menu { Button("Copy") { } } label: { Text("More") }"#),
                        ["login-copy-button", "login-more-menu"])
+    }
+
+    func testLocalizationKeysNameControls() {
+        XCTAssertEqual(ids("Button(L10n.cancel, role: .cancel) {}"), ["login-cancel-button"])
+        XCTAssertEqual(ids("Button(L10n.signIn) { }"), ["login-sign-in-button"])
+        XCTAssertEqual(ids("Toggle(L10n.showMissingEpisodes, isOn: $show)"), ["login-show-missing-episodes-switch"])
+        XCTAssertEqual(ids("Button(R.string.localizable.save()) { }"), ["login-save-button"])
+        XCTAssertEqual(ids(#"Button(String(localized: "Delete")) { }"#), ["login-delete-button"])
+    }
+
+    func testLocalizationKeysInLabelClosure() {
+        XCTAssertEqual(ids(#"Button { value -= 1 } label: { Label(L10n.decrease, systemImage: "minus") }"#),
+                       ["login-decrease-button"])
+        XCTAssertEqual(ids("Button(L10n.learnMore + .ellipsis) { }"), ["login-learn-more-button"])
+    }
+
+    func testVariablePropertiesAreNotKeys() {
+        XCTAssertEqual(ids("Button(item.name) { }"), ["login-button-button"])
+        XCTAssertEqual(ids(#"Button { } label: { Label(element.title, systemImage: "gear") }"#), ["login-gear-button"])
+    }
+
+    func testRoleNamesUnlabeledButton() {
+        XCTAssertEqual(ids("Button(title, role: .destructive, action: action)"), ["login-destructive-button"])
+        XCTAssertEqual(ids(#"Button(title, role: .cancel) { save() }"#), ["login-save-button"])
     }
 
     func testDuplicatesGetSuffix() {

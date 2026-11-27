@@ -82,7 +82,8 @@ public enum ProjectInstaller {
             changed.append(target.name)
         }
         if !changed.isEmpty {
-            try project.write(path: projectPath)
+            // Write only the pbxproj: `XcodeProj.write` also re-serializes shared schemes.
+            try project.pbxproj.write(path: XcodeProj.pbxprojPath(projectPath), override: true)
         }
         return changed
     }

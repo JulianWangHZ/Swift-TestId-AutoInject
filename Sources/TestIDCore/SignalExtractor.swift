@@ -11,6 +11,8 @@ enum SignalExtractor {
         "self", "viewModel", "vm", "model", "store", "presenter", "interactor",
         "coordinator", "router", "state", "actions", "action", "env", "environment",
     ]
+    /// Members too generic to name a value; the receiver names it instead.
+    static let genericMembers: Set<String> = ["id", "rawValue", "first", "last", "value", "wrappedValue", "self"]
     static let stopwords: Set<String> = [
         "fn", "cb", "callback", "handler", "handle", "on", "e", "ev", "evt", "event", "action",
     ]
@@ -37,25 +39,45 @@ enum SignalExtractor {
         return nil
     }
 
-    /// The first unlabeled string literal, e.g. `Button("Sign In")`, `TextField("Email", ...)`.
+    /// The first unlabeled string literal, e.g. `Button("Sign In")`, `TextField("Email", ...)`,
+    /// else a localization key in the title position.
     private static func stringArgument(of call: FunctionCallExprSyntax) -> String? {
         for arg in call.arguments where arg.label == nil {
             if let text = literal(arg.expression) { return text }
         }
-        return nil
+        guard let title = call.arguments.first, title.label == nil else { return nil }
+        return localizationKey(title.expression)
+    }
+
+    /// `L10n.signIn`, `R.string.localizable.save()`, `String(localized: "Save")`, `L10n.more + "…"`.
+    /// Keys stay the same in every language, so they make stable ids.
+    private static func localizationKey(_ expr: ExprSyntax) -> String? {
+        if let sequence = expr.as(SequenceExprSyntax.self), let first = sequence.elements.first {
+            return localizationKey(first)
+        }
+        if let member = expr.as(MemberAccessExprSyntax.self), let base = member.base {
+            let name = member.declName.baseName.text
+            return genericMembers.contains(name) || !isTypeRooted(base) ? nil : meaningful(name)
+        }
+        guard let call = expr.as(FunctionCallExprSyntax.self) else { return nil }
+        if let text = call.arguments.lazy.compactMap({ literal($0.expression) }).first {
+            return meaningful(text)
+        }
+        return localizationKey(call.calledExpression)
     }
 
     /// The first `Text("…")` or `Label("…", …)` inside a label closure.
     private static func firstText(in node: some SyntaxProtocol) -> String? {
         firstCall(in: node, named: ["Text", "Label"]) { call in
-            call.arguments.first.flatMap { $0.label == nil ? literal($0.expression) : nil }
+            call.arguments.first.flatMap { $0.label == nil ? literal($0.expression) ?? localizationKey($0.expression) : nil }
         }
     }
 
     /// `Image(systemName: "trash")` -> `trash`, for icon-only controls.
     private static func firstSymbol(in node: some SyntaxProtocol) -> String? {
         firstCall(in: node, named: ["Image", "Label"]) { call in
-            call.arguments.first { $0.label?.text == "systemName" }.flatMap { literal($0.expression) }
+            call.arguments.first { ["systemName", "systemImage"].contains($0.label?.text) }
+                .flatMap { literal($0.expression) }
         }
     }
 
@@ -68,7 +90,23 @@ enum SignalExtractor {
             if bindingLabels.contains(label), let signal = bindingName(arg.expression) { return signal }
             if label == "destination", let signal = destinationName(arg.expression) { return signal }
         }
-        return closures.action.flatMap { firstCallSignal(in: $0) }
+        return closures.action.flatMap { firstCallSignal(in: $0) } ?? role(of: call)
+    }
+
+    /// `L10n.x` and `R.string.x` start at a type; `item.name` starts at a variable.
+    private static func isTypeRooted(_ expr: ExprSyntax) -> Bool {
+        var current = expr
+        while let member = current.as(MemberAccessExprSyntax.self), let base = member.base {
+            current = base
+        }
+        return current.as(DeclReferenceExprSyntax.self)?.baseName.text.first?.isUppercase ?? false
+    }
+
+    /// `Button(title, role: .destructive)` -> `destructive`.
+    private static func role(of call: FunctionCallExprSyntax) -> String? {
+        call.arguments.first { $0.label?.text == "role" }?
+            .expression.as(MemberAccessExprSyntax.self)
+            .flatMap { meaningful($0.declName.baseName.text) }
     }
 
     /// `submit`, `viewModel.submit`, `{ viewModel.signIn() }`, `handleSubmit`.
@@ -107,10 +145,19 @@ enum SignalExtractor {
         }
     }
 
-    /// `$email` -> `email`, `$viewModel.email` -> `email`.
+    /// `$email` -> `email`, `$viewModel.email` -> `email`, `donut.id` -> `donut`, `Panel.city(id)` -> `city`.
     private static func bindingName(_ expr: ExprSyntax) -> String? {
+        if let call = expr.as(FunctionCallExprSyntax.self) {
+            return bindingName(call.calledExpression)
+        }
         if let member = expr.as(MemberAccessExprSyntax.self) {
-            return meaningful(member.declName.baseName.text)
+            let name = member.declName.baseName.text
+            guard genericMembers.contains(name) else { return meaningful(name) }
+            guard let base = member.base,
+                  !genericReceivers.contains(base.as(DeclReferenceExprSyntax.self)?.baseName.text ?? "") else {
+                return nil
+            }
+            return bindingName(base)
         }
         if let ref = expr.as(DeclReferenceExprSyntax.self) {
             return meaningful(String(ref.baseName.text.drop { $0 == "$" }))

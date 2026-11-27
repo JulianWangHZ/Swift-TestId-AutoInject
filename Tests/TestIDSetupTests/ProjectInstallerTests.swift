@@ -38,6 +38,26 @@ final class ProjectInstallerTests: XCTestCase {
         try String(contentsOfFile: projectPath + "/project.pbxproj", encoding: .utf8)
     }
 
+    func testInstallLeavesSharedSchemesUntouched() throws {
+        let schemes = projectPath + "/xcshareddata/xcschemes"
+        try FileManager.default.createDirectory(atPath: schemes, withIntermediateDirectories: true)
+        let scheme = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Scheme
+           LastUpgradeVersion = "1430"
+           version = "2.0"
+           wasCreatedForAppExtension = "YES">
+        </Scheme>
+
+        """
+        try scheme.write(toFile: schemes + "/Demo.xcscheme", atomically: true, encoding: .utf8)
+
+        try ProjectInstaller.install(projectAt: projectPath)
+        try ProjectInstaller.uninstall(projectAt: projectPath)
+
+        XCTAssertEqual(try String(contentsOfFile: schemes + "/Demo.xcscheme", encoding: .utf8), scheme)
+    }
+
     func testInstallAddsPhaseBeforeSources() throws {
         XCTAssertEqual(try ProjectInstaller.install(projectAt: projectPath), ["Demo"])
 
