@@ -11,7 +11,7 @@ BIN=$DD/Build/Products/Debug-iphonesimulator/Demo.app/Demo.debug.dylib
 F=Demo/Demo/LoginView.swift
 
 echo "== 1. clean test"
-$X -destination "$DEST" test > "$SP/v1.log" 2>&1; echo "exit=$?"
+$X -destination "$DEST" -parallel-testing-enabled NO test > "$SP/v1.log" 2>&1; echo "exit=$?"
 grep -E "Test [Cc]ase .*(passed|failed)|\*\* " "$SP/v1.log" | sed 's/ on .*//'
 echo "phase before compile?"; grep -nE "^PhaseScriptExecution|^SwiftCompile normal arm64 /" "$SP/v1.log" | head -3 | cut -c1-90
 
