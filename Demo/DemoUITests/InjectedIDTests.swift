@@ -29,7 +29,7 @@ final class InjectedIDTests: XCTestCase {
         let parts = app.staticTexts["sourceProbe"].label.split(separator: "|")
         XCTAssertEqual(parts.first, "20")
         let path = String(parts.last ?? "")
-        XCTAssertTrue(path.hasSuffix("/Demo/Demo/LoginView.swift"), path)
+        XCTAssertTrue(path.hasSuffix("/Demo/LoginView.swift"), path)
         XCTAssertFalse(path.contains("DerivedSources"), "points at the rewritten copy: \(path)")
     }
 
