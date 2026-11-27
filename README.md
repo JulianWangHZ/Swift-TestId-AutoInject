@@ -8,6 +8,8 @@ Your source files do not change.
 Install the CLI with one of:
 
 ```bash
+brew install JulianWangHZ/tap/testid-inject
+# or with Mint
 mint install JulianWangHZ/Swift-TestId-AutoInject@v0.1.0
 # or from a clone
 git clone https://github.com/JulianWangHZ/Swift-TestId-AutoInject.git
